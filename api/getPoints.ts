@@ -2,9 +2,11 @@
 var admin = require("firebase-admin");
 import { getFirestore } from 'firebase-admin/firestore';
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import dotenv from "dotenv";
 
+dotenv.config();
 
-var serviceAccount = require("../keys.json");
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || "{}");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
