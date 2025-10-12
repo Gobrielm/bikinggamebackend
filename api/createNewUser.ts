@@ -24,7 +24,7 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
-const db = getFirestore('default');
+const db = getFirestore('(default)');
 
 async function createUserData(email: string) {
   await db.collection("users").doc(email).set({
@@ -37,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const email: string = req.body.email;
     
-    createUserData(email);
+    await createUserData(email);
     res.status(200).json({
       message: "Setup User Successful!"
     });
@@ -45,7 +45,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error("Error fetching data:", err);
     res.status(500).json({ 
       error: "Internal Server Error",
-      message: `Email: ${req.body}`
+      message: `Email: ${req.body.email}`
     });
   }
 }

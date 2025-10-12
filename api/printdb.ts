@@ -3,7 +3,6 @@ var admin = require("firebase-admin");
 import { getFirestore } from 'firebase-admin/firestore';
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import dotenv from "dotenv";
-import {getPoints } from './getPoints';
 
 dotenv.config();
 
@@ -27,26 +26,26 @@ admin.initializeApp({
 
 const db = getFirestore('(default)');
 
-async function setPoints(email: string, amount: number) {
-  db.collection("users").doc(email).set({
-    points: amount,
-  });
+async function getAllDocs() {
+  const docs = await db.collection("users").listDocuments();
+  return docs;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const email: string = req.body.email;
-    const amount: number = req.body.amount; 
-    const points = await getPoints(email);
+    let msg = "";
+    const list = await getAllDocs();
+    for (const val of list) {
+        const obj = (await val.get());
+        msg += JSON.stringify(obj.id) + ': ' + JSON.stringify(obj.get('points')) + ', ';
+    }
 
-
-    await setPoints(email, amount + points);
-    
     res.status(200).json({
-      message: `Set points to ${amount + points!}`,
+      message: msg,
     });
   } catch (err) {
     console.error("Error fetching data:", err);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({error: "Internal Server Error"});
   }
+
 }

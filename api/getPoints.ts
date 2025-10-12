@@ -24,7 +24,7 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
-const db = getFirestore('default');
+export const db = getFirestore('(default)');
 
 export async function getPoints(email: string): Promise<number> {
   const docRef = db.collection("users").doc(email);
@@ -70,11 +70,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const points = await getPoints(email);
 
     res.status(200).json({
-      points: {points},
+      points: points,
     });
   } catch (err) {
     console.error("Error fetching data:", err);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ 
+      error: "Internal Server Error",
+      email: `${req.body.email}`,
+    });
   }
 
 }
