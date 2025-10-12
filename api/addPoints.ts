@@ -3,6 +3,7 @@ var admin = require("firebase-admin");
 import { getFirestore } from 'firebase-admin/firestore';
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import dotenv from "dotenv";
+import { getPoints } from './getPoints';
 
 dotenv.config();
 
@@ -24,57 +25,28 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
+async function setPoints(email: string, amount: number) {
+  db.collection("users").doc(email).set({
+    points: 100,
+  });
+}
+
 const db = getFirestore('default');
 
-export async function getPoints(email: string) {
-  
-  const docRef = db.collection("users").doc(email);
-  const snapshot = await docRef.get();
-  
-  if (!snapshot.exists) {
-    return null;
-  }
-  return snapshot.get('points');
-}
-
-export async function getUserData(email: string) {
-  
-  const docRef = db.collection("users").doc(email);
-  const snapshot = await docRef.get();
-  
-  if (!snapshot.exists) {
-    return null;
-  }
-  return snapshot.data();
-}
-
-async function postUserData() {
-  const docRef = await db.collection("users").add({ points: '20'});
-  const snapshot = await docRef.get();
-
-  if (!snapshot.exists) {
-    return null;
-  }
-  return snapshot.data();
-}
-
-async function getAllDocs() {
-  const docs = await db.collection("users").listDocuments();
-  return docs;
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  
   try {
     const email: string = req.body.email;
+    const amount: number = req.body.amount; 
     const points = await getPoints(email);
 
+
+    await setPoints(email, amount + points);
+    
     res.status(200).json({
-      points: {points},
+      message: `Set points to ${amount + points}!`,
     });
   } catch (err) {
     console.error("Error fetching data:", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
-
 }

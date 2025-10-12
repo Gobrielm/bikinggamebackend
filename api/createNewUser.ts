@@ -26,55 +26,20 @@ admin.initializeApp({
 
 const db = getFirestore('default');
 
-export async function getPoints(email: string) {
-  
-  const docRef = db.collection("users").doc(email);
-  const snapshot = await docRef.get();
-  
-  if (!snapshot.exists) {
-    return null;
-  }
-  return snapshot.get('points');
+async function createUserData(email: string) {
+  db.collection("users").doc(email).set({
+    points: 100,
+  });
 }
 
-export async function getUserData(email: string) {
-  
-  const docRef = db.collection("users").doc(email);
-  const snapshot = await docRef.get();
-  
-  if (!snapshot.exists) {
-    return null;
-  }
-  return snapshot.data();
-}
-
-async function postUserData() {
-  const docRef = await db.collection("users").add({ points: '20'});
-  const snapshot = await docRef.get();
-
-  if (!snapshot.exists) {
-    return null;
-  }
-  return snapshot.data();
-}
-
-async function getAllDocs() {
-  const docs = await db.collection("users").listDocuments();
-  return docs;
-}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  
   try {
     const email: string = req.body.email;
-    const points = await getPoints(email);
-
-    res.status(200).json({
-      points: {points},
-    });
+    createUserData(email);
+    res.status(300);
   } catch (err) {
     console.error("Error fetching data:", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
-
 }
