@@ -31,10 +31,10 @@ export async function getPoints(email: string): Promise<number> {
   const snapshot = await docRef.get();
   
   if (!snapshot.exists) {
-    return 0;
+    throw new Error("Can't find document for " + email);
   }
   let data = snapshot.get('points');
-  if (data == undefined) return 0;
+  if (data == undefined) throw new Error("Undefined Data for " + email);
   return data as number;
 }
 
@@ -57,11 +57,6 @@ async function postUserData() {
     return null;
   }
   return snapshot.data();
-}
-
-async function getAllDocs() {
-  const docs = await db.collection("users").listDocuments();
-  return docs;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

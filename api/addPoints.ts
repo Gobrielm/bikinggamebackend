@@ -3,7 +3,6 @@ var admin = require("firebase-admin");
 import { getFirestore } from 'firebase-admin/firestore';
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import dotenv from "dotenv";
-import {getPoints } from './getPoints';
 
 dotenv.config();
 
@@ -28,9 +27,23 @@ admin.initializeApp({
 const db = getFirestore('(default)');
 
 async function setPoints(email: string, amount: number) {
-  db.collection("users").doc(email).set({
-    points: amount,
-  });
+  if (typeof amount !== "number" || isNaN(amount)) {
+    throw new Error("Invalid amount: " + amount);
+  }
+  const userRef = db.collection("users").doc(email);
+  await userRef.update({points: amount});
+}
+
+async function getPoints(email: string): Promise<number> {
+  const docRef = db.collection("users").doc(email);
+  const snapshot = await docRef.get();
+  
+  if (!snapshot.exists) {
+    throw new Error("Can't find document for " + email);
+  }
+  let data = snapshot.get('points');
+  if (data == undefined) throw new Error("Undefined Data for " + email);
+  return data as number;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -38,8 +51,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const email: string = req.body.email;
     const amount: number = req.body.amount; 
     const points = await getPoints(email);
-
-
     await setPoints(email, amount + points);
     
     res.status(200).json({
@@ -47,6 +58,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (err) {
     console.error("Error fetching data:", err);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({error: "Internal Server Error",});
   }
 }
