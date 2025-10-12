@@ -65,7 +65,6 @@ async function getAllDocs() {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  
   try {
     const email: string = req.body.email;
     const points = await getPoints(email);

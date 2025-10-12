@@ -36,10 +36,16 @@ async function createUserData(email: string) {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const email: string = req.body.email;
+    
     createUserData(email);
-    res.status(300);
+    res.status(200).json({
+      message: "Setup User Successful!"
+    });
   } catch (err) {
     console.error("Error fetching data:", err);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ 
+      error: "Internal Server Error",
+      message: `Email: ${req.body}`
+    });
   }
 }
