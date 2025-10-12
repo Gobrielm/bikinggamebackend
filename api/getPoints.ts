@@ -27,7 +27,6 @@ admin.initializeApp({
 const db = getFirestore('default');
 
 export async function getPoints(email: string): Promise<number> {
-  
   const docRef = db.collection("users").doc(email);
   const snapshot = await docRef.get();
   

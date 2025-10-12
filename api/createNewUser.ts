@@ -27,7 +27,7 @@ admin.initializeApp({
 const db = getFirestore('default');
 
 async function createUserData(email: string) {
-  db.collection("users").doc(email).set({
+  await db.collection("users").doc(email).set({
     points: 100,
   });
 }

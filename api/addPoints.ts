@@ -27,7 +27,7 @@ admin.initializeApp({
 
 async function setPoints(email: string, amount: number) {
   db.collection("users").doc(email).set({
-    points: 100,
+    points: amount,
   });
 }
 
