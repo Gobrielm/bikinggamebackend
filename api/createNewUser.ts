@@ -39,7 +39,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     await createUserData(email);
     res.status(200).json({
-      message: "Setup User Successful!"
+      message: "Setup User Successful!",
+      email: email
     });
   } catch (err) {
     console.error("Error fetching data:", err);

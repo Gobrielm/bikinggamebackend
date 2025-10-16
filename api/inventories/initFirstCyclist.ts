@@ -26,24 +26,32 @@ admin.initializeApp({
 
 const db = getFirestore('(default)');
 
-async function getCyclists(email: string) {
-    const docRef = await db.collection("inventories").doc(email);
-    const snapshot = await docRef.get();
-    if (!snapshot.exists) {
-        throw new Error("Can't find document for " + email);
-    }
-    return snapshot.data;
+async function setCyclist(email: string, cyclist_id: number, cyclist_info: string) {
+    const docRef  = await db.collection("inventories").doc(email);
+    docRef.get().then((doc) => {
+        if (doc.exists) {
+            throw "Already inited this User."
+        }
+    })
+
+
+    await db.collection("inventories").doc(email).set({
+        [cyclist_id]: cyclist_info
+    });
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const email: string = req.body.email;
+    const cyclist_id: number = req.body.cyclist_id
+    const cyclist_info: string = req.body.cyclist_info
+
+    const cyclist_id_check = parseInt(cyclist_info.substring(0, 32), 2);
+    if (cyclist_id_check != cyclist_id) throw "Invalid cyclist Id"
     
-    const cyclists = await getCyclists(email);
-    
+    await setCyclist(email, cyclist_id, cyclist_info);
     res.status(200).json({
-      message: "Setup User Successfully!",
-      cyclists: cyclists
+      message: "Setup User Successfully!"
     });
   } catch (err) {
     console.error("Error creating data:", err);
