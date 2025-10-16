@@ -56,7 +56,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     console.error("Error creating data:", err);
     res.status(500).json({ 
-      error: "Internal Server Error",
+      error: "Error creating data:" + err,
+      input: `Inputs:  ${req.body}`,
       message: `Email: ${req.body.email}`
     });
   }
