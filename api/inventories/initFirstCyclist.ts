@@ -45,7 +45,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const email: string = req.body.email;
     const cyclist_info: any[] = req.body.cyclist_info
     
-    await setCyclist(email, cyclist_info[0], cyclist_info[1]);
+    await setCyclist(email, cyclist_info[0], cyclist_info);
     res.status(200).json({
       message: "Setup User Successfully!"
     });
