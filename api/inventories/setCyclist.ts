@@ -35,13 +35,9 @@ async function setCyclist(email: string, cyclist_id: number, cyclist_info: strin
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const email: string = req.body.email;
-    const cyclist_id: number = req.body.cyclist_id
-    const cyclist_info: string = req.body.cyclist_info
-
-    const cyclist_id_check = parseInt(cyclist_info.substring(0, 32), 2);
-    if (cyclist_id_check != cyclist_id) throw "Invalid cyclist Id"
+    const cyclist_info: any[] = req.body.cyclist_info
     
-    await setCyclist(email, cyclist_id, cyclist_info);
+    await setCyclist(email, cyclist_info[0], cyclist_info[1]);
     res.status(200).json({
       message: "Setup User Successfully!"
     });
