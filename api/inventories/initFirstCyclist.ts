@@ -46,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cyclist_id: number = req.body.cyclist_id
     const cyclist_info: string = req.body.cyclist_info
 
-    const cyclist_id_check = parseInt(cyclist_info.substring(0, 32), 2);
+    const cyclist_id_check = parseInt(cyclist_info.split("|")[0], 2);
     if (cyclist_id_check != cyclist_id) throw "Invalid cyclist Id"
     
     await setCyclist(email, cyclist_id, cyclist_info);
@@ -58,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(500).json({ 
       error: "Error creating data:" + err,
       input: `Inputs:  ${req.body}`,
-      message: `Email: ${req.body.email}`
+      message: `Email: ${req.body}`
     });
   }
 }
