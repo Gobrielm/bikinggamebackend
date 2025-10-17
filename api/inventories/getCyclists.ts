@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 var admin = require("firebase-admin");
-import { getFirestore } from 'firebase-admin/firestore';
+import { DocumentData, getFirestore } from 'firebase-admin/firestore';
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import dotenv from "dotenv";
 
@@ -26,7 +26,7 @@ admin.initializeApp({
 
 const db = getFirestore('(default)');
 
-async function getCyclists(email: string) {
+async function getCyclists(email: string): Promise<DocumentData> {
     const docRef = await db.collection("inventories").doc(email);
     const snapshot = await docRef.get();
     if (!snapshot.exists) {
@@ -43,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     res.status(200).json({
       message: "Setup User Successfully!",
-      cyclists: cyclists
+      cyclists: {cyclists}
     });
   } catch (err) {
     console.error("Error creating data:", err);
