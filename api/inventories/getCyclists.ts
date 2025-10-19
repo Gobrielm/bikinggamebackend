@@ -30,9 +30,11 @@ async function getCyclists(email: string): Promise<DocumentData> {
     const docRef = await db.collection("inventories").doc(email);
     const snapshot = await docRef.get();
     if (!snapshot.exists) {
-        throw new Error("Can't find document for " + email);
+      throw new Error("Can't find document for " + email);
     }
-    return snapshot.data;
+    const data = snapshot.data();
+    if (data == undefined) throw new Error("Can't find data in document for " + email);
+    return data
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -42,13 +44,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cyclists = await getCyclists(email);
     
     res.status(200).json({
-      message: "Setup User Successfully!",
-      cyclists: {cyclists}
+      message: "Found Cyclists successfully!",
+      cyclists
     });
   } catch (err) {
     console.error("Error creating data:", err);
     res.status(500).json({ 
-      error: "Internal Server Error",
+      error: err,
       message: `Email: ${req.body.email}`
     });
   }
