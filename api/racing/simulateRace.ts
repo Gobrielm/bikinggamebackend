@@ -25,86 +25,178 @@ admin.initializeApp({
 });
 
 class CyclistGroup {
-    cyclists: (Cyclist | null)[][]; // row, then col
+  position: number;
+  velocity: number;
+  cyclists: (Cyclist | null)[][]; // row, then col
 
-    constructor(width: number) {
-        this.cyclists = [];
-        this.cyclists[0] = []; // Initialize inner array
-        this.cyclists[0].fill(null, 0, width);
+  constructor(width: number, initalDepth?: number) {
+    this.position = 0;
+    this.velocity = 0;
+    this.cyclists = [];
+    for (let i = 0; i < (initalDepth ?? 1); i++) {
+      this.cyclists[i] = [];
+      this.cyclists[i].fill(null, 0, width);
+    }
+  }
+
+  addCyclistToFront(cyclist: Cyclist): void {
+    for (let j = 0; j < this.cyclists[0].length; j++) {
+      if (this.cyclists[0][j] != null) {
+        continue;
+      }
+      this.addCyclistToPositon(cyclist, 0, j);
     }
 
-    addCyclistToBack(cyclist: Cyclist): void {
-        for (let i = this.cyclists[0].length; i >= 0; i--) {
-            for (let j = 0; j < this.cyclists.length; j++) {
-                if (this.cyclists[i][j] == null) {
-                    this.addCyclistToPositon(cyclist, i, j);
-                    return;
-                }
-            }
+    
+  }
+
+  addCyclistToRow(cyclist: Cyclist, row: number): void {
+    if (this.cyclists.length == row) {
+      this.extendCyclistGroup()
+    }
+    for (let j = 0; j < this.cyclists[row].length; j++) {
+      if (this.cyclists[row][j] != null) {
+        continue;
+      }
+      this.addCyclistToPositon(cyclist, row, j);
+    }
+    this.addCyclistToRow(cyclist, row + 1); // todo need to swap and move that rider back instead
+  }
+
+  addCyclistToBack(cyclist: Cyclist): void {
+    for (let i = this.cyclists.length; i >= 0; i--) {
+      for (let j = 0; j < this.cyclists[0].length; j++) {
+        if (this.cyclists[i][j] != null) {
+          continue;
         }
-        this.extendCyclistGroup();
-        this.addCyclistToBack(cyclist);
-    }
 
-    addCyclistToPositon(cyclist: Cyclist, i: number, j: number): void {
-        this.cyclists[i][j] = cyclist;
+        this.addCyclistToPositon(cyclist, i, j);
+        return;
+      }
     }
+    this.extendCyclistGroup();
+    this.addCyclistToBack(cyclist);
+  }
 
-    extendCyclistGroup() {
-        this.cyclists.push([]);
-        this.cyclists[this.cyclists.length - 1].fill(null, 0, this.cyclists[0].length);
-    }
+  addCyclistToPositon(cyclist: Cyclist, i: number, j: number): void {
+    this.cyclists[i][j] = cyclist;
+  }
+
+  extendCyclistGroup() {
+    this.cyclists.push([]);
+    this.cyclists[this.cyclists.length - 1].fill(null, 0, this.cyclists[0].length);
+  }
 }
 
 class Cyclist {
-    cyclistStats: CyclistStats;
-    constructor(stats: any[]) {
-        this.cyclistStats = new CyclistStats(stats);
-    }
+  position: number;
+  velocity: number;
+  cyclistStats: CyclistStats;
+  raceStrategy: string;
+  constructor(stats: any[], raceStrategy: string) {
+    this.position = 0;
+    this.velocity = 0;
+    this.cyclistStats = new CyclistStats(stats);
+    this.raceStrategy = raceStrategy;
+  }
 }
 
 class CyclistStats {
-    recovery: number;
-    strength: number;
-    threshold: number;
-    weight: number;
-    height: number;
-    constructor(stats: any[]) {
-        this.recovery = stats[1];
-        this.strength = stats[2];
-        this.threshold = stats[3];
-        this.weight = stats[4];
-        this.height = stats[5];
+  recovery: number;
+  strength: number;
+  threshold: number;
+  weight: number;
+  height: number;
+  constructor(stats: any[]) {
+    if (stats.length < 5) {
+      throw "Invalid Stats";
     }
+    this.recovery = stats[1];
+    this.strength = stats[2];
+    this.threshold = stats[3];
+    this.weight = stats[4];
+    this.height = stats[5];
+  }
+}
+
+enum CyclistRacingStrategy {
+  rouleur, // Outpace through threshold
+  domestique, // Helper basically
+  climber, // Go hard on hills to outpace
+  sprinter, // Conserve in pack and wait to sprint at end
+  baroudeur, // Gets into a breakaway early on
 }
 
 const db = getFirestore('(default)');
 
-async function getCyclist(email: string, id: number): Promise<DocumentData> {
+async function getCyclist(email: string, id: number): Promise<any[]> {
     const docRef = await db.collection("inventories").doc(email);
     const snapshot = await docRef.get();
     if (!snapshot.exists) {
       throw new Error("Can't find document for " + email);
     }
-    const data = snapshot.get(`$id`);
+    const data = snapshot.get(`${id}`);
     if (data == undefined) throw new Error("Can't find data in document for " + email);
-    return data
+    return data as any[];
 }
 
-async function simulateRace(cyclist: Cyclist) {
+// Not inclusive of max
+function getRandomNum(min: number, max: number): number {
+  return Math.random() * (max - min - 1) + min;
+}
+
+function generateRandomCyclistStats(difficulty: number): any[] {
+  let stats = [0, 0, 0, 0, 0];
+  let stat1 = getRandomNum(difficulty * 0.5, difficulty * 1.5);
+  let stat2 = getRandomNum(difficulty * 0.5, difficulty * 1.5);
+  let stat3 = difficulty - stat1 - stat2 + getRandomNum(-difficulty * 0.1, difficulty * 0.1);
+  let i = getRandomNum(0, 2);
+  stats[i] = stat1;
+  i = (i + 1) % 3;
+  stats[i] = stat2;
+  i = (i + 1) % 3;
+  stats[i] = stat3;
+
+  stats[3] = getRandomNum(120, 200);
+  stats[4] = getRandomNum(5.2, 6.5);
+
+  return stats;
+}
+
+
+/* 
+  difficulty: Average combined stats of a cyclist
+*/
+function createMainPeloton(cyclist: Cyclist, difficulty: number): CyclistGroup {
+  let otherCyclists: Cyclist[] = [];
+  for (let i = 0; i < 39; i++) {
+    otherCyclists.push(new Cyclist(generateRandomCyclistStats(difficulty), CyclistRacingStrategy[getRandomNum(0, 5)]))
+  }
+  otherCyclists.splice(getRandomNum(0, 40), 0, cyclist);
+  
+  let cyclistGroup = new CyclistGroup(8, 5);
+  for (let i = 0; i < otherCyclists.length; i++) {
+    cyclistGroup.addCyclistToBack(otherCyclists[i]);
+  }
+  return cyclistGroup;
+}
+
+async function simulateRace(mainPeloton: CyclistGroup) {
 
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  let cyclist: any[]
+  let cyclistData: any[] = [];
+  let raceStrat: string = CyclistRacingStrategy[1];
     try {
     const email: string = req.body.email;
-    cyclist = req.body.cyclist
+    cyclistData = req.body.cyclist;
+    raceStrat = CyclistRacingStrategy[req.body.racingStrategy];
     
-    const databaseCyclist = await getCyclist(email, cyclist[0]);
+    const databaseCyclist = await getCyclist(email, cyclistData[0]);
 
-    if (databaseCyclist != cyclist) {
-        throw "Mismatch Between local and database cyclists";
+    if (databaseCyclist != cyclistData) {
+      throw "Mismatch Between local and database cyclists";
     }
     
   } catch (err) {
@@ -114,6 +206,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message: `Email: ${req.body.email}`
     });
   }
+  try {
+    let cyclistObj = new Cyclist(cyclistData, raceStrat);
+    await simulateRace(createMainPeloton(cyclistObj, 90));
+  } catch (err) {
 
-
+  }
+  
 }
