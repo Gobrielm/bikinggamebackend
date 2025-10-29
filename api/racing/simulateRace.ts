@@ -27,30 +27,39 @@ admin.initializeApp({
 class CyclistGroup {
   position: number;
   velocity: number;
+  route: number[];
   cyclists: (Cyclist | null)[][]; // row, then col
 
-  constructor(width: number, initalDepth?: number) {
+  constructor(width: number, route: number[], initalDepth?: number) {
     this.position = 0;
     this.velocity = 0;
     this.cyclists = [];
+    this.route = route;
     for (let i = 0; i < (initalDepth ?? 1); i++) {
       this.cyclists[i] = [];
       this.cyclists[i].fill(null, 0, width);
     }
   }
 
-  addCyclistToFront(cyclist: Cyclist): void {
-    for (let j = 0; j < this.cyclists[0].length; j++) {
-      if (this.cyclists[0][j] != null) {
-        continue;
+  simulateTick(): void {
+    for (let row = 0; row < this.cyclists.length; row++) {
+      let cyclistRow = this.cyclists[row];
+      let draft = this.getDraft(row);
+      for (let cyclist of cyclistRow) {
+        if (cyclist) cyclist.simulateTick(draft, this.route);
       }
-      this.addCyclistToPositon(cyclist, 0, j);
     }
-
-    
   }
 
-  addCyclistToRow(cyclist: Cyclist, row: number): void {
+  getDraft(row: number): number {
+    return Math.sqrt(row);
+  }
+
+  addCyclistToFront(cyclist: Cyclist): void {
+    this.addCyclistToRow(cyclist, 0, getRandomNum(0, this.cyclists[0].length));
+  }
+
+  addCyclistToRow(cyclist: Cyclist, row: number, col: number): void {
     if (this.cyclists.length == row) {
       this.extendCyclistGroup()
     }
@@ -60,7 +69,11 @@ class CyclistGroup {
       }
       this.addCyclistToPositon(cyclist, row, j);
     }
-    this.addCyclistToRow(cyclist, row + 1); // todo need to swap and move that rider back instead
+    // swap with cyclist at col
+    let tempCyclist = this.cyclists[row][col] as Cyclist;
+    this.cyclists[row][col] = cyclist;
+
+    this.addCyclistToRow(tempCyclist, row + 1, col);
   }
 
   addCyclistToBack(cyclist: Cyclist): void {
@@ -82,7 +95,7 @@ class CyclistGroup {
     this.cyclists[i][j] = cyclist;
   }
 
-  extendCyclistGroup() {
+  extendCyclistGroup(): void {
     this.cyclists.push([]);
     this.cyclists[this.cyclists.length - 1].fill(null, 0, this.cyclists[0].length);
   }
@@ -91,22 +104,41 @@ class CyclistGroup {
 class Cyclist {
   position: number;
   velocity: number;
+  energyLevel: number; // 0 - 100
   cyclistStats: CyclistStats;
   raceStrategy: string;
   constructor(stats: any[], raceStrategy: string) {
     this.position = 0;
     this.velocity = 0;
+    this.energyLevel = 100;
     this.cyclistStats = new CyclistStats(stats);
     this.raceStrategy = raceStrategy;
+  }
+
+  simulateTick(draft: number, route: number[]): void {
+    this.position += this.velocity;
+
+    let grade: number = route[Math.floor(this.position)] - route[Math.max(Math.floor(this.position - 1), 0)];
+    let raceProgress = this.position / route.length; // Used with raceStrats
+    
+    let effort = 0.5; // CalculateEffort
+    this.energyLevel -= (effort * (this.cyclistStats.threshold / 100)); // linear rn, change later
+    this.energyLevel += (this.cyclistStats.recovery / 300);
+
+    let mult = draft - (grade * this.cyclistStats.weight / 1000);
+
+    let newVelocity = (effort / 2) * mult;
+
+    this.velocity = newVelocity;
   }
 }
 
 class CyclistStats {
-  recovery: number;
-  strength: number;
-  threshold: number;
-  weight: number;
-  height: number;
+  recovery: number; // 0 - 100
+  strength: number; // 0 - 100
+  threshold: number; // 0 - 100
+  weight: number; // 100~ - 200~
+  height: number; // 5~ - 7~
   constructor(stats: any[]) {
     if (stats.length < 5) {
       throw "Invalid Stats";
@@ -163,18 +195,28 @@ function generateRandomCyclistStats(difficulty: number): any[] {
   return stats;
 }
 
+function createRoute(): number[] {
+  let route: number[] = [0];
+  const len: number = 100;
+  for (let i = 1; i < len; i++) {
+    route.push(Math.max(route[0] + getRandomNum(-2, 3), 0));
+  }
+
+  return route;
+}
+
 
 /* 
   difficulty: Average combined stats of a cyclist
 */
-function createMainPeloton(cyclist: Cyclist, difficulty: number): CyclistGroup {
+function createMainPeloton(cyclist: Cyclist, difficulty: number, route: number[]): CyclistGroup {
   let otherCyclists: Cyclist[] = [];
   for (let i = 0; i < 39; i++) {
     otherCyclists.push(new Cyclist(generateRandomCyclistStats(difficulty), CyclistRacingStrategy[getRandomNum(0, 5)]))
   }
   otherCyclists.splice(getRandomNum(0, 40), 0, cyclist);
   
-  let cyclistGroup = new CyclistGroup(8, 5);
+  let cyclistGroup = new CyclistGroup(8, route, 5);
   for (let i = 0; i < otherCyclists.length; i++) {
     cyclistGroup.addCyclistToBack(otherCyclists[i]);
   }
@@ -182,7 +224,13 @@ function createMainPeloton(cyclist: Cyclist, difficulty: number): CyclistGroup {
 }
 
 async function simulateRace(mainPeloton: CyclistGroup) {
+  let raceHasFinished = false;
 
+  while (!raceHasFinished) {
+
+    mainPeloton.simulateTick();
+
+  }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -208,7 +256,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   try {
     let cyclistObj = new Cyclist(cyclistData, raceStrat);
-    await simulateRace(createMainPeloton(cyclistObj, 90));
+    let route = createRoute();
+    await simulateRace(createMainPeloton(cyclistObj, 90, route));
   } catch (err) {
 
   }
