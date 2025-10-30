@@ -46,13 +46,20 @@ class CyclistGroup {
       let cyclistRow = this.cyclists[row];
       let draft = this.getDraft(row);
       for (let cyclist of cyclistRow) {
-        if (cyclist) cyclist.simulateTick(draft, this.route);
+        if (cyclist) {
+          cyclist.simulateTick(draft, this.route);
+          if (cyclist.velocity > this.velocity + 1) {
+            
+          } else if (cyclist.velocity < this.velocity - 1) {
+
+          }
+        }
       }
     }
   }
-
+  // What percentage of wind is blocked
   getDraft(row: number): number {
-    return Math.sqrt(row);
+    return Math.min(Math.sqrt(row), 4.0) / 4.0;
   }
 
   addCyclistToFront(cyclist: Cyclist): void {
@@ -91,8 +98,9 @@ class CyclistGroup {
     this.addCyclistToBack(cyclist);
   }
 
-  addCyclistToPositon(cyclist: Cyclist, i: number, j: number): void {
-    this.cyclists[i][j] = cyclist;
+  addCyclistToPositon(cyclist: Cyclist, row: number, col: number): void {
+    this.cyclists[row][col] = cyclist;
+    cyclist.position = this.position;
   }
 
   extendCyclistGroup(): void {
@@ -101,12 +109,15 @@ class CyclistGroup {
   }
 }
 
+const airResistConst: number = 0.33;
+
 class Cyclist {
   position: number;
   velocity: number;
   energyLevel: number; // 0 - 100
   cyclistStats: CyclistStats;
   raceStrategy: string;
+
   constructor(stats: any[], raceStrategy: string) {
     this.position = 0;
     this.velocity = 0;
@@ -125,11 +136,16 @@ class Cyclist {
     this.energyLevel -= (effort * (this.cyclistStats.threshold / 100)); // linear rn, change later
     this.energyLevel += (this.cyclistStats.recovery / 300);
 
-    let mult = draft - (grade * this.cyclistStats.weight / 1000);
+    let posForce = effort / 2;
 
-    let newVelocity = (effort / 2) * mult;
+    let negForceGrav = grade * this.cyclistStats.weight / 1000;
+    let negForceAir = airResistConst * Math.pow(this.velocity, 2) * (1 - draft);
 
-    this.velocity = newVelocity;
+    let negForceTot = negForceAir + negForceGrav;
+
+    let magnitude = posForce - negForceTot;
+
+    this.velocity += magnitude > 0 ? Math.min(magnitude, 1): Math.max(magnitude, -1);
   }
 }
 
